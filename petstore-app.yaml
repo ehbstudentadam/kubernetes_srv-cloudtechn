@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: petstore-webapp-deployment
+  name: petstore-webapp
   labels:
     app: petstore-webapp
 spec:
@@ -20,7 +20,7 @@ spec:
           stdin: true
           tty: true
           ports:
-            - containerPort: 6868
+            - containerPort: 8080
           env:
             - name: SPRING_APPLICATION_JSON
               valueFrom:
@@ -38,18 +38,17 @@ spec:
     app: petstore-webapp
   ports:
     - protocol: TCP
-      port: 6868
-      targetPort: 6868
-      nodePort: 30009
+      port: 8080
+      targetPort: 8080
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: loadbalance-service
+  name: petstore-webapp
 spec:
+  type: LoadBalancer
   selector:
     app: petstore-webapp
   ports:
-    - port: 6868
-  externalTrafficPolicy: Local
-  type: LoadBalancer
+    - port: 8080
+      targetPort: 8080
