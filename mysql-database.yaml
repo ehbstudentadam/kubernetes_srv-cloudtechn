@@ -44,8 +44,6 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: MYSQLDB_DATABASE
-            - name: MYSQL_ROOT_HOST
-              value: "%"
           volumeMounts:
             - name: mysql-vol
               mountPath: /var/lib/mysql

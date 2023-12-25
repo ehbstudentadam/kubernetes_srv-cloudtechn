@@ -73,8 +73,9 @@ kubectl apply -f .\azure-kub.yaml
 
 kubectl get all
 
-kubectl get node
 kubectl logs {pod-name} -f
+
+minikube service {loadbalancer-name}
 
 kubectl describe pod
 
@@ -82,4 +83,6 @@ kubectl get pod x --show-labels
 
 kubectl get node -o wide
 minikube ip
+
+minikube stop
 ```
