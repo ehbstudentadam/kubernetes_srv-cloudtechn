@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets
+type: Opaque
+data:
+  MYSQLDB_USER: cm9vdA==
+  MYSQLDB_ROOT_PASSWORD: cGV0U3RvcmUx
+  MYSQLDB_DATABASE: cGV0c3RvcmU=
+  GOOGLE_OAUTH2_ID: NTQ0NjQwMDM5MzItOGhrdmFmODlza3Axa3RmMXVlMXFuNGcyMGVqdTdwMTYuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20=
+  GOOGLE_OAUTH2_SECRET: R09DU1BYLUVEbEVCelRDUUJRbWVEMTJEZXdhazJyQTdPVmg=
+  SPRING_APPLICATION_JSON: eyAic3ByaW5nLmRhdGFzb3VyY2UudXJsIiA6ICJqZGJjOm15c3FsOi8vbXlzcWwtc2VydmljZTozMzA2L3BldHN0b3JlIiwgInNwcmluZy5kYXRhc291cmNlLnVzZXJuYW1lIiA6ICJyb290IiwgInNwcmluZy5kYXRhc291cmNlLnBhc3N3b3JkIiA6ICJwZXRTdG9yZTEiLCAic3ByaW5nLmpwYS5oaWJlcm5hdGUuZGRsLWF1dG8iIDogInVwZGF0ZSIsICJzcHJpbmcuanBhLmRlZmVyLWRhdGFzb3VyY2UtaW5pdGlhbGl6YXRpb24iIDogInRydWUiLCAic3ByaW5nLnNxbC5pbml0Lm1vZGUiIDogImFsd2F5cyIsICJzcHJpbmcuc2VjdXJpdHkub2F1dGgyLmNsaWVudC5yZWdpc3RyYXRpb24uZ29vZ2xlLmNsaWVudC1pZCIgOiAiNTQ0NjQwMDM5MzItOGhrdmFmODlza3Axa3RmMXVlMXFuNGcyMGVqdTdwMTYuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCAic3ByaW5nLnNlY3VyaXR5Lm9hdXRoMi5jbGllbnQucmVnaXN0cmF0aW9uLmdvb2dsZS5jbGllbnQtc2VjcmV0IiA6ICJHT0NTUFgtRURsRUJ6VENRQlFtZUQxMkRld2FrMnJBN09WaCIsICJzcHJpbmcuanBhLnByb3BlcnRpZXMuaGliZXJuYXRlLmRpYWxlY3QiIDogIm9yZy5oaWJlcm5hdGUuZGlhbGVjdC5NeVNRTDhEaWFsZWN0IiB9
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-statefulset
+  labels:
+    app: mysql
+spec:
+  serviceName: "mysql"
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.2.0
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: MYSQLDB_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: MYSQLDB_DATABASE
+          volumeMounts:
+            - name: mysql-vol
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-vol
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petstore-webapp
+  labels:
+    app: petstore-webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: petstore-webapp
+  template:
+    metadata:
+      labels:
+        app: petstore-webapp
+    spec:
+      containers:
+        - name: petstore-webapp
+          image: alendoc/java-petstore:v1
+          stdin: true
+          tty: true
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_APPLICATION_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: SPRING_APPLICATION_JSON
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: petstore-webapp
+spec:
+  type: LoadBalancer
+  selector:
+    app: petstore-webapp
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: adam.lenez@student.ehb.be
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-service
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - student.ehb.petstore.com
+      secretName: student.ehb.petstore.com
+  rules:
+    - host: student.ehb.petstore.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: petstore-webapp
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-specific-ports
+spec:
+  podSelector:
+    matchLabels:
+      app: petstore-webapp
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - port: 443
+  egress:
+    - ports:
+        - port: 443

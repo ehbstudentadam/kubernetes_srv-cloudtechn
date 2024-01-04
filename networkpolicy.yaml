@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-specific-ports
+spec:
+  podSelector:
+    matchLabels:
+      app: petstore-webapp
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - port: 8080
+  egress:
+    - ports:
+        - port: 8080
