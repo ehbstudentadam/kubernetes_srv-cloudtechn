@@ -14,9 +14,9 @@ Het is de bedoeling dat je minstens gebruikt maakt van een database
 - [x] Zorg ervoor dat je project op een Kubernetes-cluster zou kunnen gedeployed worden
   - Indien het praktisch onmogelijk is om je applicatie effectief naar de cloud te deployen, zorg ervoor dat deze werkt binnen minikube
   - Bewaar alle config-files en mogelijke commando's die je moet uitvoeren om je werkstuk op een blanco minikube install te deployen
-- [ ] Hoe rekening met de beveiliging van je project. We gaan ervan uit dat de codebase veilig is, dus focus je op de beveiliging van de implementatie
+- [x] Hoe rekening met de beveiliging van je project. We gaan ervan uit dat de codebase veilig is, dus focus je op de beveiliging van de implementatie
   - [x] Geen "wildcard" access tot je database van buitenaf
-  - [ ] Block alle poorten die niet in gebruik zijn
+  - [x] Block alle poorten die niet in gebruik zijn
   - [x] SSL certificaat waar nodig (selfsigned of via letsencrypt is voldoende)
  
 
@@ -57,10 +57,10 @@ I came accross this [guide](https://kubernetes.io/docs/tasks/configure-pod-conta
 
 ## Configuration
 
-start minikube  
+Start minikube  
 `minikube start`
 
-enable ingress  
+Enable ingress  
 `minikube addons enable ingress`
 
 Custom Resource Definitions (CRDs) required by cert-manager need to be installed. Cert-manager uses CRDs to define and extend resources like ClusterIssuer. You can do this by applying the cert-manager manifests that include the necessary CRDs. Here's how you can install cert-manager:
@@ -77,7 +77,7 @@ Install cert-manager
 Apply configurations  
 `kubectl apply -f .\complete-deployment.yaml`
 
-Wait untill everyting is pulled and deployed
+Wait untill everyting is pulled and deployed  
 `kubectl get all`
 
 Change hostfile in windows
@@ -109,6 +109,9 @@ kubectl delete -f .\cert.yaml
 kubectl apply -f .\azure-kub.yaml
 kubectl apply -f .\cert.yaml
 
+kubectl delete -f .\complete-deployment.yaml
+kubectl apply -f .\complete-deployment.yaml
+
 kubectl get all
 
 kubectl logs {pod-name} -f
@@ -128,4 +131,74 @@ To remove all Ingress controllers in Minikube, you can follow these steps:
 minikube stop
 minikube delete
 minikube start
+```
+
+##
+Om ervoor te zorgen dat je project zichzelf opnieuw implementeert (herdeployt) nadat je een nieuwe versie van de sourcecode hebt gepusht naar je repository, kun je een Continuous Integration (CI) en Continuous Deployment (CD) pipeline instellen. Hier zijn de algemene stappen die je zou kunnen volgen:
+
+1. Versionering van je Sourcecode:  
+Zorg ervoor dat je je sourcecode versieert. Dit kan worden gedaan met behulp van versiebeheerstools zoals Git. Bij elke nieuwe versie of wijziging, verhoog je de versienummering.
+
+2. CI/CD-tool selecteren:  
+Kies een CI/CD-tool die geschikt is voor je Kubernetes- en Minikube-omgeving. Populaire tools zijn Jenkins, GitLab CI/CD, Travis CI, CircleCI, etc.
+
+3. Pipeline-configuratie:  
+Configureer je CI/CD-pipeline om automatisch te worden geactiveerd wanneer er wijzigingen in de repository worden gedetecteerd. Je zou triggers kunnen instellen op basis van nieuwe commits in de Git-repository.
+
+4. Build-fase:  
+In de build-fase bouw je de nieuwe versie van je Docker-image. Dit kan worden gedaan met behulp van de Dockerfile in je project.
+
+5. Test-fase:  
+Voer alle nodige tests uit om de kwaliteit en stabiliteit van de nieuwe build te waarborgen. Dit kan unit tests, integratietests, en andere tests omvatten die relevant zijn voor je applicatie.
+
+6. Push naar Container Registry:  
+Nadat de build en tests succesvol zijn uitgevoerd, push je het nieuwe Docker-image naar een container registry, bijvoorbeeld Docker Hub of een private registry.
+
+7. Update Kubernetes-configuratie:  
+Bij het pushen van de nieuwe versie, kun je de Kubernetes-configuratie bijwerken met het nieuwe Docker-image tagnummer.
+
+8. Herdeploy naar Kubernetes:  
+Automatiseer de implementatie naar Kubernetes. Dit kan worden gedaan door kubectl-commando's te gebruiken in je CI/CD-script om de nieuwe versie naar Minikube te implementeren.
+
+Hier is een vereenvoudigd voorbeeld van een CI/CD-script (bijvoorbeeld in een Jenkinsfile voor Jenkins):
+```
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            steps {
+                script {
+                    // Bouw Docker-image
+                    sh 'docker build -t my-petstore:latest .'
+                }
+            }
+        }
+        stage('Test') {
+            steps {
+                script {
+                    // Voer tests uit
+                    sh 'npm test'
+                }
+            }
+        }
+        stage('Push to Registry') {
+            steps {
+                script {
+                    // Push naar container registry
+                    sh 'docker push my-registry/my-petstore:latest'
+                }
+            }
+        }
+        stage('Deploy to Minikube') {
+            steps {
+                script {
+                    // Update Kubernetes-configuratie en herdeploy
+                    sh 'kubectl set image deployment/petstore-webapp petstore-webapp=my-registry/my-petstore:latest'
+                }
+            }
+        }
+    }
+}
+
 ```
