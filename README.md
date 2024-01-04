@@ -50,6 +50,8 @@ I have successfully depolyed the containers to Azure Kubernetes with my Azure Fo
   - docker image [here](https://hub.docker.com/repository/docker/alendoc/java-petstore/general)
 - The exposed port needed to be changed from 6868  to 8080 in that image
 - Use of loadbalance service instead of nodeport
+- SSL cert configurations
+- Ingress affinity because of sessionproblems
 
 I came accross this [guide](https://kubernetes.io/docs/tasks/configure-pod-container/translate-compose-kubernetes/) to Translate a Docker Compose file with [Kompose](http://kompose.io)
 - It's shit
